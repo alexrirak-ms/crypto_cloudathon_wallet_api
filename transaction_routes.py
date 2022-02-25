@@ -1,6 +1,8 @@
+import json
 import logging
 
 import blockcypher
+import requests
 from flask import request, abort
 
 from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file
@@ -41,7 +43,6 @@ def create_transaction():
         amount: the amount to send (in the lowest non-divisible unit - satoshi, gwei, etc)
     :return: json object with the transaction hash from the blockchain (transactionHash)
     """
-    # TODO: Coin should be determined from wallet type - currently hardcoded
 
     # validate the request
     if not request.json \
@@ -53,18 +54,31 @@ def create_transaction():
 
     logging.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
 
+    # fetch wallet details from wallet api
+    wallet_details_response = requests.get(request.url_root + "/wallet/" + request.json['fromWalletId'])
+
+    if wallet_details_response.status_code != 200:
+        logging.error('Could not fetch wallet details for {}'.format(request.json['fromWalletId']))
+        abort(400)
+
+    wallet_details_response = json.loads(wallet_details_response.text)
+
+    # fetch the private key from db - api does not return that (we're semi-secure 😁)
     with get_db_connection() as db:
         with db.cursor() as cursor:
             # fetch the private key for the wallet
             cursor.execute(GET_WALLET_PRIVATE_KEY_BY_ID % (request.json['fromWalletId']))
             result = cursor.fetchone()
 
+            if result is None:
+                abort(400, "Unknown Wallet id")
+
             # Use teh blockcypher api to initiate the transaction
             transaction_hash = blockcypher.simple_spend(
                 from_privkey=result[0],
                 to_address=request.json['toAddress'],
                 to_satoshis=request.json['amount'],
-                coin_symbol='bcy',
+                coin_symbol=wallet_details_response['symbol'].lower(),
                 api_key=BLOCKCYPHER_API_KEY)
 
             return ({"transactionHash": transaction_hash}, 201)
