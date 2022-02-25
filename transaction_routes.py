@@ -54,14 +54,7 @@ def create_transaction():
 
     logging.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
 
-    # fetch wallet details from wallet api
-    wallet_details_response = requests.get(request.url_root + "/wallet/" + request.json['fromWalletId'])
-
-    if wallet_details_response.status_code != 200:
-        logging.error('Could not fetch wallet details for {}'.format(request.json['fromWalletId']))
-        abort(400)
-
-    wallet_details_response = json.loads(wallet_details_response.text)
+    wallet_details_response = get_wallet_details_by_id(request.json['fromWalletId'])
 
     # fetch the private key from db - api does not return that (we're semi-secure 😁)
     with get_db_connection() as db:
@@ -82,6 +75,51 @@ def create_transaction():
                 api_key=BLOCKCYPHER_API_KEY)
 
             return ({"transactionHash": transaction_hash}, 201)
+
+
+@app.route('/transaction/fund/<string:wallet_id>/<int:amount>', methods=['POST'])
+def create_funding_transaction(wallet_id: str, amount: int):
+    """
+    creates a funding transaction using a test faucet
+    :param wallet_id: internal wallet if of wallet to fund
+    :param amount: the amount to send (in the lowest non-divisible unit - satoshi)
+    :return: json object with the transaction hash from the blockchain (transactionHash)
+    """
+
+    wallet_details_response = get_wallet_details_by_id(wallet_id)
+
+    # the faucet only work for the BTC test chain (BCY)
+    if wallet_details_response['symbol'].lower() != 'bcy':
+        abort(400, "Funding not available on this chain")
+
+    # the faucet will fund not fund more than 100 million BlockCypher satoshis at a time
+    if amount > 100000000:
+        abort(400, "Fund amount too high")
+
+    fundingTxn = blockcypher.send_faucet_coins(address_to_fund=wallet_details_response['public_address'],
+                                               satoshis=amount,
+                                               coin_symbol=wallet_details_response['symbol'].lower(),
+                                               api_key=BLOCKCYPHER_API_KEY)
+
+    return ({"transactionHash": fundingTxn['tx_ref']}, 201)
+
+
+def get_wallet_details_by_id(wallet_id: str):
+    """
+    fetches the wallet details from the wallet API
+    :param wallet_id: internal wallet id
+    :return: json object of wallet details
+        chain_id, name, public_address, public_key, symbol, user_id, wallet_id
+    """
+
+    # fetch wallet details from wallet api
+    wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
+
+    if wallet_details_response.status_code != 200:
+        logging.error('Could not fetch wallet details for {}'.format(wallet_id))
+        abort(400)
+
+    return json.loads(wallet_details_response.text)
 
 
 # Define all our queries here cause python doesn't like me doing this on top
