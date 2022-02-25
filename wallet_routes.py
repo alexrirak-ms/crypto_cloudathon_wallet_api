@@ -1,6 +1,9 @@
 import json
+import uuid
 
-from application import app, get_string_from_file, get_db_connection
+import blockcypher
+
+from application import app, get_string_from_file, get_db_connection, BLOCKCYPHER_API_KEY
 
 from flask import abort
 
@@ -11,8 +14,13 @@ def wallet():
 
 
 @app.route('/wallet/<string:wallet_id>')
-def get_wallet(wallet_id: str,):
-
+def get_wallet(wallet_id: str, ):
+    """
+    Fetches wallet details based on id
+    :param wallet_id: the wallet id to fetch
+    :return: json object of wallet details
+        chain_id, name, public_address, public_key, symbol, user_id, wallet_id
+    """
     if wallet_id is None:
         abort(400, "Invalid Request")
 
@@ -34,7 +42,12 @@ def get_wallet(wallet_id: str,):
 
 @app.route('/wallets/user/<string:user_id>')
 def get_wallets_by_user(user_id: str):
-
+    """
+    Fetches wallet details based on user_id
+    :param user_id: the id of the wallet owner
+    :return: json object list of wallet details
+        chain_id, name, public_address, public_key, symbol, user_id, wallet_id
+    """
     if user_id is None:
         abort(400, "Invalid Request")
 
@@ -54,6 +67,66 @@ def get_wallets_by_user(user_id: str):
             return (json.dumps(result), 200)
 
 
+@app.route('/wallet/<string:chain_id>/<string:user_id>', methods=['PUT'])
+def create_wallet(chain_id: str, user_id: str):
+    """
+    Creates a wallet on the given chain belonging to the given user
+    :param chain_id: the chain on which to create an account
+    :param user_id: the owner of the new wallet
+    :return: json object of wallet details
+        chain_id, name, public_address, public_key, symbol, user_id, wallet_id
+    """
+
+    if chain_id is None:
+        abort(400, "Coin not specified")
+
+    if user_id is None:
+        abort(400, "User not specified")
+
+    with get_db_connection() as db:
+        with db.cursor() as cursor:
+            # get info on the chain
+            cursor.execute(GET_CHAIN_INFO_BY_ID % (chain_id))
+
+            # maps the column names onto the result giving us a dictionary and thus json friendly object
+            columns = cursor.description
+            chain_info = [{columns[index][0]: column for index, column in enumerate(value)}
+                          for value in cursor.fetchall()]
+
+            if chain_info is None or not chain_info:
+                abort(400, "Unknown chain id")
+
+            chain_info = chain_info[0]
+
+            # Create a new wallet using blockcypher api
+            new_wallet = blockcypher.generate_new_address(coin_symbol=chain_info['symbol'].lower(),
+                                                          api_key=BLOCKCYPHER_API_KEY)
+
+            # generate uuids for our db entries
+            connection_id = str(uuid.uuid4())
+            wallet_id = str(uuid.uuid4())
+
+            # insert connection details and wallet as a single transaction
+            cursor.execute(INSERT_CONNECTION_DETAILS, (connection_id,
+                                                       new_wallet['address'],
+                                                       new_wallet['public'],
+                                                       new_wallet['private'],
+                                                       chain_id))
+            cursor.execute(INSERT_WALLET_DETAILS, (wallet_id,
+                                                   user_id,
+                                                   connection_id))
+            db.commit()
+
+            # fetch the wallet as it should now be in the db
+            return get_wallet(wallet_id)
+
+    # we should never get here
+    abort(500, "Unknown error")
+
+
 # Define all our queries here cause python doesn't like me doing this on top
 GET_WALLET_DETAILS_BY_ID = get_string_from_file('sql/getWalletDetailsById.sql')
 GET_WALLETS_BY_USER = get_string_from_file('sql/getWalletsByUser.sql')
+GET_CHAIN_INFO_BY_ID = get_string_from_file('sql/getChainInfoById.sql')
+INSERT_CONNECTION_DETAILS = get_string_from_file('sql/insertConnectionDetails.sql')
+INSERT_WALLET_DETAILS = get_string_from_file('sql/insertWalletDetails.sql')

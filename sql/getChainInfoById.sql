@@ -1,0 +1,1 @@
+SELECT * from supported_chains where chain_id = '%s'
