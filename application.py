@@ -1,7 +1,7 @@
 import psycopg2 as psycopg2
 from flask import Flask
 from dotenv import load_dotenv
-import os
+import os, sys
 
 app = Flask(__name__)
 
@@ -46,3 +46,11 @@ import transaction_routes
 
 # Load env vars
 load_dotenv()
+
+# Make sure the env vars we expect are set
+if DATABASE_HOST is None or \
+        DATABASE_USER is None or \
+        DATABASE_PASS is None or \
+        DATABASE_SCHM is None:
+    print("*** Missing environment variables ***")
+    sys.exit()
