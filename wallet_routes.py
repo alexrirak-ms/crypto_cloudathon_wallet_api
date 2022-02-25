@@ -1,3 +1,5 @@
+import json
+
 from application import app, get_string_from_file, get_db_connection
 
 from flask import abort
@@ -30,5 +32,28 @@ def get_wallet(wallet_id: str,):
             return (result[0], 200)
 
 
+@app.route('/wallets/user/<string:user_id>')
+def get_wallets_by_user(user_id: str):
+
+    if user_id is None:
+        abort(400, "Invalid Request")
+
+    with get_db_connection() as db:
+        with db.cursor() as cursor:
+            # fetch the private key for the wallet
+            cursor.execute(GET_WALLETS_BY_USER % (user_id))
+
+            # maps the column names onto the result giving us a dictionary and thus json friendly object
+            columns = cursor.description
+            result = [{columns[index][0]: column for index, column in enumerate(value)}
+                      for value in cursor.fetchall()]
+
+            if result is None or not result:
+                abort(400, "Unknown User id")
+
+            return (json.dumps(result), 200)
+
+
 # Define all our queries here cause python doesn't like me doing this on top
 GET_WALLET_DETAILS_BY_ID = get_string_from_file('sql/getWalletDetailsById.sql')
+GET_WALLETS_BY_USER = get_string_from_file('sql/getWalletsByUser.sql')
