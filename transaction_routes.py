@@ -59,6 +59,9 @@ def create_transaction():
             cursor.execute(GET_WALLET_PRIVATE_KEY_BY_ID % (request.json['fromWalletId']))
             result = cursor.fetchone()
 
+            if result is None:
+                abort(400, "Unknown Wallet id")
+
             # Use teh blockcypher api to initiate the transaction
             transaction_hash = blockcypher.simple_spend(
                 from_privkey=result[0],
