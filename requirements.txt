@@ -1,4 +1,5 @@
 Flask~=2.0.3
+Flask-Cors~=3.0.7
 python-dotenv~=0.15.0
 blockcypher~=1.0.93
 psycopg2~=2.9.3
