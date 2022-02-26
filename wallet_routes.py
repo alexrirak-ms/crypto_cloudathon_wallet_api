@@ -71,7 +71,7 @@ def get_wallets_by_user(user_id: str):
             # if we need values, fetch them using our other method
             if include_values:
                 for item in result:
-                    item["balances"] = get_wallet_value(item["wallet_id"])
+                    item["balances"] = get_wallet_value(item["wallet_id"])[0]
 
             return (json.dumps(result), 200)
 
