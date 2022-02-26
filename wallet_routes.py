@@ -5,7 +5,7 @@ import blockcypher
 
 from application import app, get_string_from_file, get_db_connection, BLOCKCYPHER_API_KEY
 
-from flask import abort
+from flask import abort, request
 
 
 @app.route('/wallet')
@@ -47,9 +47,13 @@ def get_wallets_by_user(user_id: str):
     :param user_id: the id of the wallet owner
     :return: json object list of wallet details
         chain_id, name, public_address, public_key, symbol, user_id, wallet_id
+        If query param include_values=True also returns confirmed_balance, unconfirmed_balance, total_balance
     """
     if user_id is None:
         abort(400, "Invalid Request")
+
+    # check if query param include_values is set
+    include_values = request.args.get("include_values", default=False, type=bool)
 
     with get_db_connection() as db:
         with db.cursor() as cursor:
@@ -64,7 +68,36 @@ def get_wallets_by_user(user_id: str):
             if result is None or not result:
                 abort(400, "Unknown User id")
 
+            # if we need values, fetch them using our other method
+            if include_values:
+                for item in result:
+                    item["balances"] = get_wallet_value(item["wallet_id"])
+
             return (json.dumps(result), 200)
+
+
+@app.route('/wallet/<string:wallet_id>/value')
+def get_wallet_value(wallet_id: str):
+    """
+    Given a wallet id fetches its balance from the blockchain
+    :param wallet_id: the wallet id to fetch
+    :return: json object of wallet balances (in the lowest non-divisible unit - satoshi, gwei, etc)
+        confirmed_balance, unconfirmed_balance, total_balance
+    """
+    if wallet_id is None:
+        abort(400, "Invalid Request")
+
+    wallet_details = get_wallet(wallet_id)[0]
+
+    address_details = blockcypher.get_address_overview(wallet_details['public_address'],
+                                                       coin_symbol=wallet_details['symbol'].lower(),
+                                                       api_key=BLOCKCYPHER_API_KEY)
+
+    return ({
+        "confirmed_balance": address_details['balance'],
+        "unconfirmed_balance": address_details['unconfirmed_balance'],
+        "total_balance": address_details['final_balance']
+    }, 200)
 
 
 @app.route('/wallet/<string:chain_id>/<string:user_id>', methods=['PUT'])
