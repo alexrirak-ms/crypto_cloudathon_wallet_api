@@ -1,5 +1,7 @@
+from datetime import datetime
 import json
 import logging
+import uuid
 
 import blockcypher
 import requests
@@ -41,7 +43,7 @@ def create_transaction():
         fromWalletId: id of the wallet in the DB from which to send the money
         toAddress: this is a wallet address on the proper chain (assumed to be correct 🤞)
         amount: the amount to send (in the lowest non-divisible unit - satoshi, gwei, etc)
-    :return: json object with the transaction hash from the blockchain (transactionHash)
+    :return: json object with the transaction_id and status of the created transaction
     """
 
     # validate the request
@@ -74,7 +76,17 @@ def create_transaction():
                 coin_symbol=wallet_details_response['symbol'].lower(),
                 api_key=BLOCKCYPHER_API_KEY)
 
-            return ({"transactionHash": transaction_hash}, 201)
+            transaction_id = str(uuid.uuid4())
+            cursor.execute(INSERT_CRYPTO_TRANSACTION_DETAILS, (transaction_id,
+                                                               request.json['fromWalletId'],
+                                                               wallet_details_response['chain_id'],
+                                                               transaction_hash,
+                                                               datetime.now(),
+                                                               None,
+                                                               "Pending"))
+            db.commit()
+
+            return ({"transaction_id": transaction_id, "status": "Pending"}, 201)
 
 
 @app.route('/transaction/fund/<string:wallet_id>/<int:amount>', methods=['POST'])
@@ -124,3 +136,4 @@ def get_wallet_details_by_id(wallet_id: str):
 
 # Define all our queries here cause python doesn't like me doing this on top
 GET_WALLET_PRIVATE_KEY_BY_ID = get_string_from_file('sql/getWalletPrivateKeyById.sql')
+INSERT_CRYPTO_TRANSACTION_DETAILS = get_string_from_file('sql/insertCryptoTransactionDetails.sql')
