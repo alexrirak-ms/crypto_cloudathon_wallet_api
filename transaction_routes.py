@@ -9,6 +9,7 @@ from flask import request, abort
 
 from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file
 
+logger = logging.getLogger(__name__)
 
 @app.route('/transaction')
 def transaction():
@@ -29,7 +30,7 @@ def get_transaction(coin: str, transaction_hash: str):
                                                               api_key=BLOCKCYPHER_API_KEY)
 
     if 'error' in transaction_details:
-        logging.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
+        logger.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
         abort(404)
 
     return (transaction_details, 200)
@@ -51,10 +52,10 @@ def create_transaction():
             or not 'fromWalletId' in request.json \
             or not 'toAddress' in request.json \
             or not 'amount' in request.json:
-        logging.error('Received invalid request \n {} \n'.format(request.json))
+        logger.error('Received invalid request \n {} \n'.format(request.json))
         abort(400)
 
-    logging.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
+    logger.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
 
     wallet_details_response = get_wallet_details_by_id(request.json['fromWalletId'])
 
@@ -149,7 +150,7 @@ def get_wallet_details_by_id(wallet_id: str):
     wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
 
     if wallet_details_response.status_code != 200:
-        logging.error('Could not fetch wallet details for {}'.format(wallet_id))
+        logger.error('Could not fetch wallet details for {}'.format(wallet_id))
         abort(400)
 
     return json.loads(wallet_details_response.text)
