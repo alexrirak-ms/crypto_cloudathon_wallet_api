@@ -151,7 +151,7 @@ def create_wallet(chain_id: str, user_id: str):
             db.commit()
 
             # fetch the wallet as it should now be in the db
-            return get_wallet(wallet_id)
+            return (get_wallet(wallet_id)[0], 201)
 
     # we should never get here
     abort(500, "Unknown error")

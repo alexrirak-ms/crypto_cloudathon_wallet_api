@@ -14,7 +14,7 @@ Creates a wallet on the given chain belonging to the given user
 
 ## Success Response
 
-**Code** : `200 OK`
+**Code** : `201 OK`
 
 **Content example**
 
