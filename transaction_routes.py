@@ -68,8 +68,8 @@ def create_transaction():
     if not request.json \
             or not 'fromWalletId' in request.json \
             or not 'toAddress' in request.json \
-            or not 'amount' in request.json\
-            or request.json['amount'] < 1:
+            or not 'amount' in request.json \
+            or int(request.json['amount']) < 1:
         logger.error('Received invalid request \n {} \n'.format(request.json))
         abort(400)
 
