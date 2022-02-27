@@ -1,12 +1,25 @@
 import json
+import logging
+import sys
 import uuid
 
 import blockcypher
 
 from application import app, get_string_from_file, get_db_connection, BLOCKCYPHER_API_KEY
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 from flask import abort, request
 
+Log_Format = "%(levelname)s %(asctime)s - %(message)s"
+
+logging.basicConfig(stream=sys.stdout,
+                    format=Log_Format,
+                    level=logging.INFO)
+
+logger = logging.getLogger(__name__)
+
+# Export logs + traces to azure insights
+logger.addHandler(AzureLogHandler())
 
 @app.route('/wallet')
 def wallet():
@@ -29,15 +42,18 @@ def get_wallet(wallet_id: str, ):
             # fetch the private key for the wallet
             cursor.execute(GET_WALLET_DETAILS_BY_ID % (wallet_id))
 
-            # maps the column names onto the result giving us a dictionary and thus json friendly object
-            columns = cursor.description
-            result = [{columns[index][0]: column for index, column in enumerate(value)}
-                      for value in cursor.fetchall()]
+            try:
+                # maps the column names onto the result giving us a dictionary and thus json friendly object
+                columns = cursor.description
+                result = [{columns[index][0]: column for index, column in enumerate(value)}
+                          for value in cursor.fetchall()]
 
-            if result is None:
-                abort(400, "Unknown Wallet id")
+                if result is None:
+                    abort(400, "Unknown Wallet id")
 
-            return (result[0], 200)
+                return (result[0], 200)
+            except IndexError:
+                abort(400, "Could not fetch wallet details")
 
 
 @app.route('/wallets/user/<string:user_id>')
@@ -60,20 +76,23 @@ def get_wallets_by_user(user_id: str):
             # fetch the private key for the wallet
             cursor.execute(GET_WALLETS_BY_USER % (user_id))
 
-            # maps the column names onto the result giving us a dictionary and thus json friendly object
-            columns = cursor.description
-            result = [{columns[index][0]: column for index, column in enumerate(value)}
-                      for value in cursor.fetchall()]
+            try:
+                # maps the column names onto the result giving us a dictionary and thus json friendly object
+                columns = cursor.description
+                result = [{columns[index][0]: column for index, column in enumerate(value)}
+                          for value in cursor.fetchall()]
 
-            if result is None or not result:
-                abort(400, "Unknown User id")
+                if result is None or not result:
+                    abort(400, "Unknown User id")
 
-            # if we need values, fetch them using our other method
-            if include_values:
-                for item in result:
-                    item["balances"] = get_wallet_value(item["wallet_id"])[0]
+                # if we need values, fetch them using our other method
+                if include_values:
+                    for item in result:
+                        item["balances"] = get_wallet_value(item["wallet_id"])[0]
 
-            return (json.dumps(result), 200)
+                return (json.dumps(result), 200)
+            except IndexError:
+                abort(400, "Could not fetch wallet info")
 
 
 @app.route('/wallet/<string:wallet_id>/value')
@@ -123,11 +142,17 @@ def create_wallet(chain_id: str, user_id: str):
 
             # maps the column names onto the result giving us a dictionary and thus json friendly object
             columns = cursor.description
-            chain_info = [{columns[index][0]: column for index, column in enumerate(value)}
-                          for value in cursor.fetchall()]
+            chain_info = {}
 
-            if chain_info is None or not chain_info:
-                abort(400, "Unknown chain id")
+            try:
+                chain_info = [{columns[index][0]: column for index, column in enumerate(value)}
+                              for value in cursor.fetchall()]
+
+                if chain_info is None or not chain_info:
+                    abort(400, "Unknown chain id")
+
+            except IndexError:
+                abort(400, "Could not find chain id")
 
             chain_info = chain_info[0]
 

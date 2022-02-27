@@ -1,11 +1,19 @@
 import logging
+import sys
 import uuid
 
 from application import app, get_string_from_file, get_db_connection
 from flask import abort, request
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 
+Log_Format = "%(levelname)s %(asctime)s - %(message)s"
+
+logging.basicConfig(stream=sys.stdout,
+                    format=Log_Format,
+                    level=logging.INFO)
+
 logger = logging.getLogger(__name__)
+streamHandler = logging.StreamHandler(sys.stdout)
 
 logger.addHandler(AzureLogHandler())
 
