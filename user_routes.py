@@ -3,6 +3,11 @@ import uuid
 
 from application import app, get_string_from_file, get_db_connection
 from flask import abort, request
+from opencensus.ext.azure.log_exporter import AzureLogHandler
+
+logger = logging.getLogger(__name__)
+
+logger.addHandler(AzureLogHandler())
 
 
 @app.route('/user')
@@ -68,7 +73,7 @@ def get_user_by_username(username: str):
 
                 if result is None:
                     if create_new:
-                        logging.info('Could not find user with username {}, creating one'.format(username))
+                        logger.info('Could not find user with username {}, creating one'.format(username))
                         return get_user_by_id(create_user(username, username))
                     else:
                         abort(400, "Could not find user")
@@ -76,7 +81,7 @@ def get_user_by_username(username: str):
                 return (result[0], 200)
             except IndexError:
                 if create_new:
-                    logging.info('Could not find user with username {}, creating one'.format(username))
+                    logger.info('Could not find user with username {}, creating one'.format(username))
                     return get_user_by_id(create_user(username, username))
                 else:
                     abort(400, "Could not find user")

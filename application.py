@@ -4,8 +4,24 @@ from flask_cors import CORS
 from dotenv import load_dotenv
 import os, sys
 
+from opencensus.ext.azure import metrics_exporter
+from opencensus.ext.azure.trace_exporter import AzureExporter
+from opencensus.ext.flask.flask_middleware import FlaskMiddleware
+from opencensus.trace import config_integration
+from opencensus.trace.samplers import ProbabilitySampler
+from opencensus.trace.tracer import Tracer
+
 app = Flask(__name__)
 CORS(app)
+middleware = FlaskMiddleware(
+    app,
+    exporter=AzureExporter(),
+    sampler=ProbabilitySampler(rate=1.0),
+)
+metrics_exporter.new_metrics_exporter()
+config_integration.trace_integrations(['postgresql'])
+config_integration.trace_integrations(['requests'])
+tracer = Tracer(exporter=AzureExporter(), sampler=ProbabilitySampler(1.0))
 
 '''
 This the the root entry file. Only things that need to be centrally accessible should be defined here

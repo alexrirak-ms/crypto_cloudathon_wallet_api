@@ -1,13 +1,19 @@
-from datetime import datetime
 import json
 import logging
 import uuid
+from datetime import datetime
 
 import blockcypher
 import requests
 from flask import request, abort
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 
-from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file
+from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file, tracer
+
+logger = logging.getLogger(__name__)
+
+# Export logs + traces to azure insights
+logger.addHandler(AzureLogHandler())
 
 
 @app.route('/transaction')
@@ -29,7 +35,7 @@ def get_transaction(coin: str, transaction_hash: str):
                                                               api_key=BLOCKCYPHER_API_KEY)
 
     if 'error' in transaction_details:
-        logging.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
+        logger.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
         abort(404)
 
     return (transaction_details, 200)
@@ -51,10 +57,10 @@ def create_transaction():
             or not 'fromWalletId' in request.json \
             or not 'toAddress' in request.json \
             or not 'amount' in request.json:
-        logging.error('Received invalid request \n {} \n'.format(request.json))
+        logger.error('Received invalid request \n {} \n'.format(request.json))
         abort(400)
 
-    logging.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
+    logger.info('Creating new transaction from {}'.format(request.json['fromWalletId']))
 
     wallet_details_response = get_wallet_details_by_id(request.json['fromWalletId'])
 
@@ -130,11 +136,13 @@ def get_value_in_usd(symbol: str) -> str:
         symbol = 'btc'
 
     url = "https://data.messari.io/api/v1/assets/{}/metrics/market-data".format(symbol)
-    response = requests.get(url)
-    crypto_data = json.loads(response.content)
-    value_in_usd = crypto_data['data']['market_data']['price_usd']
 
-    return str(value_in_usd)
+    with tracer.span(name='parent'):
+        response = requests.get(url)
+        crypto_data = json.loads(response.content)
+        value_in_usd = crypto_data['data']['market_data']['price_usd']
+
+        return str(value_in_usd)
 
 
 def get_wallet_details_by_id(wallet_id: str):
@@ -146,13 +154,14 @@ def get_wallet_details_by_id(wallet_id: str):
     """
 
     # fetch wallet details from wallet api
-    wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
+    with tracer.span(name='parent'):
+        wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
 
-    if wallet_details_response.status_code != 200:
-        logging.error('Could not fetch wallet details for {}'.format(wallet_id))
-        abort(400)
+        if wallet_details_response.status_code != 200:
+            logger.error('Could not fetch wallet details for {}'.format(wallet_id))
+            abort(400)
 
-    return json.loads(wallet_details_response.text)
+        return json.loads(wallet_details_response.text)
 
 
 # Define all our queries here cause python doesn't like me doing this on top
