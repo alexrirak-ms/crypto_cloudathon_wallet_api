@@ -1,15 +1,20 @@
-from datetime import datetime
 import json
 import logging
 import uuid
+from datetime import datetime
 
 import blockcypher
 import requests
 from flask import request, abort
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 
-from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file
+from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file, tracer
 
 logger = logging.getLogger(__name__)
+
+# Export logs + traces to azure insights
+logger.addHandler(AzureLogHandler())
+
 
 @app.route('/transaction')
 def transaction():
@@ -131,11 +136,13 @@ def get_value_in_usd(symbol: str) -> str:
         symbol = 'btc'
 
     url = "https://data.messari.io/api/v1/assets/{}/metrics/market-data".format(symbol)
-    response = requests.get(url)
-    crypto_data = json.loads(response.content)
-    value_in_usd = crypto_data['data']['market_data']['price_usd']
 
-    return str(value_in_usd)
+    with tracer.span(name='parent'):
+        response = requests.get(url)
+        crypto_data = json.loads(response.content)
+        value_in_usd = crypto_data['data']['market_data']['price_usd']
+
+        return str(value_in_usd)
 
 
 def get_wallet_details_by_id(wallet_id: str):
@@ -147,13 +154,14 @@ def get_wallet_details_by_id(wallet_id: str):
     """
 
     # fetch wallet details from wallet api
-    wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
+    with tracer.span(name='parent'):
+        wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
 
-    if wallet_details_response.status_code != 200:
-        logger.error('Could not fetch wallet details for {}'.format(wallet_id))
-        abort(400)
+        if wallet_details_response.status_code != 200:
+            logger.error('Could not fetch wallet details for {}'.format(wallet_id))
+            abort(400)
 
-    return json.loads(wallet_details_response.text)
+        return json.loads(wallet_details_response.text)
 
 
 # Define all our queries here cause python doesn't like me doing this on top
