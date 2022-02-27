@@ -3,6 +3,28 @@ The source code for the wallet and transaction APIs. Hosted as a single flask.
 
 [![Build and deploy to Azure Web App - crypto-banksters-wallet-api](https://github.com/alexrirak-ms/crypto_cloudathon_wallet_api/actions/workflows/main_crypto-banksters-wallet-api.yml/badge.svg)](https://github.com/alexrirak-ms/crypto_cloudathon_wallet_api/actions/workflows/main_crypto-banksters-wallet-api.yml)
 
+## Running Locally
+Install python dependencies and run flask app as normal. PyCharm run configuration is also provided. 
+*Also see the environment setup section below*
+```
+pip install -r requirements.txt
+set FLASK_APP=application
+flask run
+```
+
+
+### Environment Setup
+To run this locally you need to have the proper environment variables set. `dotenv` is used to make this easy.
+Create a new file in the root directory called `.env` and populate it with the following keys and add in the values
+````
+BLOCKCYPHER_API_KEY=
+DATABASE_HOST=
+DATABASE_USER=
+DATABASE_PASS=
+DATABASE_SCHM=
+APPLICATIONINSIGHTS_CONNECTION_STRING=
+````
+
 ## API Docs
 
 ### Transaction API
