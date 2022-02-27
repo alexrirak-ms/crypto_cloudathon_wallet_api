@@ -8,6 +8,7 @@ import blockcypher
 import requests
 from flask import request, abort
 from opencensus.ext.azure.log_exporter import AzureLogHandler
+from requests import ReadTimeout
 
 from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file, tracer
 
@@ -195,14 +196,18 @@ def get_wallet_details_by_id(wallet_id: str):
     # fetch wallet details from wallet api
     url = request.url_root + "wallet/" + wallet_id
     logger.info("Fetching wallet details for {} at {}".format(wallet_id, url))
-    wallet_details_response = requests.get(url)
 
-    if wallet_details_response.status_code != 200:
-        logger.error('Could not fetch wallet details for {} \n {}'.format(wallet_id, wallet_details_response.text))
-        abort(400)
+    try:
+        wallet_details_response = requests.get(url, timeout=10)
 
-    return json.loads(wallet_details_response.text)
+        if wallet_details_response.status_code != 200:
+            logger.error('Could not fetch wallet details for {} \n {}'.format(wallet_id, wallet_details_response.text))
+            abort(500, "Non 200 response from wallet api")
 
+        return json.loads(wallet_details_response.text)
+    except ReadTimeout:
+        logger.error('Timed out waiting for wallet details for {}'.format(wallet_id))
+        abort(500, "Timed out waiting on wallet api")
 
 # Define all our queries here cause python doesn't like me doing this on top
 GET_WALLET_PRIVATE_KEY_BY_ID = get_string_from_file('sql/getWalletPrivateKeyById.sql')
