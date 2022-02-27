@@ -77,6 +77,8 @@ def create_transaction():
 
     wallet_details_response = get_wallet_details_by_id(request.json['fromWalletId'])
 
+    logger.info('Fetched wallet details {}'.format(wallet_details_response))
+
     # fetch the private key from db - api does not return that (we're semi-secure 😁)
     with get_db_connection() as db:
         with db.cursor() as cursor:
@@ -86,6 +88,8 @@ def create_transaction():
 
             if result is None:
                 abort(400, "Unknown Wallet id")
+
+            logger.info('Fetched wallet private key')
 
             transaction_hash = ""
             # Use teh blockcypher api to initiate the transaction
@@ -100,6 +104,8 @@ def create_transaction():
                 logger.error("Could not fetch transaction details from BlockCypher")
                 abort(400, "Error from Blockcypher API")
 
+            logger.info('Created transaction with hash {}'.format(transaction_hash))
+
             transaction_id = str(uuid.uuid4())
             cursor.execute(INSERT_CRYPTO_TRANSACTION_DETAILS, (transaction_id,
                                                                request.json['fromWalletId'],
@@ -109,6 +115,8 @@ def create_transaction():
                                                                None,
                                                                "Pending"))
             db.commit()
+
+            logger.info('Persisted transaction in db with id {}'.format(transaction_id))
 
             return ({"transaction_id": transaction_id, "status": "Pending"}, 201)
 
