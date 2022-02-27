@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 import uuid
 from datetime import datetime
 
@@ -9,6 +10,12 @@ from flask import request, abort
 from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 from application import app, BLOCKCYPHER_API_KEY, get_db_connection, get_string_from_file, tracer
+
+Log_Format = "%(levelname)s %(asctime)s - %(message)s"
+
+logging.basicConfig(stream=sys.stdout,
+                    format=Log_Format,
+                    level=logging.INFO)
 
 logger = logging.getLogger(__name__)
 
@@ -30,15 +37,20 @@ def get_transaction(coin: str, transaction_hash: str):
     :return: the raw transaction details as per blockcypher
         (see https://www.blockcypher.com/dev/bitcoin/#transaction-hash-endpoint)
     """
-    transaction_details = blockcypher.get_transaction_details(transaction_hash,
-                                                              coin_symbol=coin,
-                                                              api_key=BLOCKCYPHER_API_KEY)
 
-    if 'error' in transaction_details:
-        logger.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
-        abort(404)
+    try:
+        transaction_details = blockcypher.get_transaction_details(transaction_hash,
+                                                                  coin_symbol=coin,
+                                                                  api_key=BLOCKCYPHER_API_KEY)
 
-    return (transaction_details, 200)
+        if 'error' in transaction_details:
+            logger.warning("Could not find transaction {} on {} chain".format(transaction_hash, coin))
+            abort(404)
+
+        return (transaction_details, 200)
+    except AssertionError:
+        logger.error("Could not fetch transaction details from BlockCypher")
+        abort(400, "Error from Blockcypher API")
 
 
 @app.route('/transaction', methods=['PUT'])
@@ -56,7 +68,8 @@ def create_transaction():
     if not request.json \
             or not 'fromWalletId' in request.json \
             or not 'toAddress' in request.json \
-            or not 'amount' in request.json:
+            or not 'amount' in request.json\
+            or request.json['amount'] < 1:
         logger.error('Received invalid request \n {} \n'.format(request.json))
         abort(400)
 
@@ -74,13 +87,18 @@ def create_transaction():
             if result is None:
                 abort(400, "Unknown Wallet id")
 
+            transaction_hash = ""
             # Use teh blockcypher api to initiate the transaction
-            transaction_hash = blockcypher.simple_spend(
-                from_privkey=result[0],
-                to_address=request.json['toAddress'],
-                to_satoshis=request.json['amount'],
-                coin_symbol=wallet_details_response['symbol'].lower(),
-                api_key=BLOCKCYPHER_API_KEY)
+            try:
+                transaction_hash = blockcypher.simple_spend(
+                    from_privkey=result[0],
+                    to_address=request.json['toAddress'],
+                    to_satoshis=request.json['amount'],
+                    coin_symbol=wallet_details_response['symbol'].lower(),
+                    api_key=BLOCKCYPHER_API_KEY)
+            except AssertionError:
+                logger.error("Could not fetch transaction details from BlockCypher")
+                abort(400, "Error from Blockcypher API")
 
             transaction_id = str(uuid.uuid4())
             cursor.execute(INSERT_CRYPTO_TRANSACTION_DETAILS, (transaction_id,
@@ -114,12 +132,20 @@ def create_funding_transaction(wallet_id: str, amount: int):
     if amount > 100000000:
         abort(400, "Fund amount too high")
 
-    fundingTxn = blockcypher.send_faucet_coins(address_to_fund=wallet_details_response['public_address'],
-                                               satoshis=amount,
-                                               coin_symbol=wallet_details_response['symbol'].lower(),
-                                               api_key=BLOCKCYPHER_API_KEY)
+    if amount < 1:
+        abort(400, "Fund amount too low")
 
-    return ({"transactionHash": fundingTxn['tx_ref']}, 201)
+    try:
+        fundingTxn = blockcypher.send_faucet_coins(address_to_fund=wallet_details_response['public_address'],
+                                                   satoshis=amount,
+                                                   coin_symbol=wallet_details_response['symbol'].lower(),
+                                                   api_key=BLOCKCYPHER_API_KEY)
+
+        return ({"transactionHash": fundingTxn['tx_ref']}, 201)
+
+    except AssertionError:
+        logger.error("Could not create funding transaction via BlockCypher")
+        abort(400, "Error from Blockcypher API")
 
 
 @app.route('/usd-value/<string:symbol>')
@@ -139,6 +165,11 @@ def get_value_in_usd(symbol: str) -> str:
 
     with tracer.span(name='parent'):
         response = requests.get(url)
+
+        if response.status_code != 200:
+            logger.error("Could not create fetch usd value via messari")
+            abort(400, "Error from Messari API")
+
         crypto_data = json.loads(response.content)
         value_in_usd = crypto_data['data']['market_data']['price_usd']
 
