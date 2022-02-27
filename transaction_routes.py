@@ -120,7 +120,7 @@ def create_funding_transaction(wallet_id: str, amount: int):
 def get_value_in_usd(symbol: str) -> str:
     """
     Fetches the USD value of a coin
-    :param symbol: the symbol of the con
+    :param symbol: the symbol of the coin
     :return: string representation of the price
     """
     symbol = symbol.lower()
@@ -133,6 +133,7 @@ def get_value_in_usd(symbol: str) -> str:
     response = requests.get(url)
     crypto_data = json.loads(response.content)
     value_in_usd = crypto_data['data']['market_data']['price_usd']
+
     return str(value_in_usd)
 
 
