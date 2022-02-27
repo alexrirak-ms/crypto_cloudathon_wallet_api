@@ -30,7 +30,7 @@ All fields are required.
 
 ## Success Response
 
-**Code** : `200 OK`
+**Code** : `201 OK`
 
 **Content example**
 

@@ -14,7 +14,7 @@ Creates a funding transaction using a test faucet. *This currently only works fo
 
 ## Success Response
 
-**Code** : `200 OK`
+**Code** : `201 OK`
 
 **Content example**
 
