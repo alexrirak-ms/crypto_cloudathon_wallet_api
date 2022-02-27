@@ -102,5 +102,5 @@ def create_user(username: str, email: str) -> str:
 
 # Define all our queries here cause python doesn't like me doing this on top
 GET_USER_INFO_BY_USERNAME = get_string_from_file('sql/getUserInfoByUsername.sql')
-GET_USER_INFO_BY_ID = get_string_from_file('sql/getUserInfoByID.sql')
+GET_USER_INFO_BY_ID = get_string_from_file('sql/getUserInfoById.sql')
 INSERT_USER_DETAILS = get_string_from_file('sql/insertUserDetails.sql')
