@@ -11,6 +11,7 @@ pip install -r requirements.txt
 set FLASK_APP=application
 flask run
 ```
+Please note, one of the pre-requisites is pg_config which is installed by installing the PostGresSQL client
 
 
 ### Environment Setup
