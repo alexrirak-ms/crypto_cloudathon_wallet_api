@@ -45,6 +45,7 @@ def get_string_from_file(file_path: str) -> str:
 # import routes from other files
 import wallet_routes
 import transaction_routes
+import user_routes
 
 # Load env vars
 load_dotenv()
