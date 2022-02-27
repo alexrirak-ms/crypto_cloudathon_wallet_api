@@ -193,14 +193,15 @@ def get_wallet_details_by_id(wallet_id: str):
     """
 
     # fetch wallet details from wallet api
-    with tracer.span(name='parent'):
-        wallet_details_response = requests.get(request.url_root + "/wallet/" + wallet_id)
+    url = request.url_root + "/wallet/" + wallet_id
+    logger.info("Fetching wallet details for {} at {}".format(wallet_id, url))
+    wallet_details_response = requests.get(url)
 
-        if wallet_details_response.status_code != 200:
-            logger.error('Could not fetch wallet details for {}'.format(wallet_id))
-            abort(400)
+    if wallet_details_response.status_code != 200:
+        logger.error('Could not fetch wallet details for {} \n {}'.format(wallet_id, wallet_details_response.text))
+        abort(400)
 
-        return json.loads(wallet_details_response.text)
+    return json.loads(wallet_details_response.text)
 
 
 # Define all our queries here cause python doesn't like me doing this on top
