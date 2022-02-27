@@ -116,6 +116,26 @@ def create_funding_transaction(wallet_id: str, amount: int):
     return ({"transactionHash": fundingTxn['tx_ref']}, 201)
 
 
+@app.route('/usd-value/<string:symbol>')
+def get_value_in_usd(symbol: str) -> str:
+    """
+    Fetches the USD value of a coin
+    :param symbol: the symbol of the con
+    :return: string representation of the price
+    """
+    symbol = symbol.lower()
+
+    # The test chain doesnt have separate valuation
+    if symbol == 'bcy':
+        symbol = 'btc'
+
+    url = "https://data.messari.io/api/v1/assets/{}/metrics/market-data".format(symbol)
+    response = requests.get(url)
+    crypto_data = json.loads(response.content)
+    value_in_usd = crypto_data['data']['market_data']['price_usd']
+    return str(value_in_usd)
+
+
 def get_wallet_details_by_id(wallet_id: str):
     """
     fetches the wallet details from the wallet API
