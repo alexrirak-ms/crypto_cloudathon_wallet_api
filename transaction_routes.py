@@ -193,7 +193,7 @@ def get_wallet_details_by_id(wallet_id: str):
     """
 
     # fetch wallet details from wallet api
-    url = request.url_root + "/wallet/" + wallet_id
+    url = request.url_root + "wallet/" + wallet_id
     logger.info("Fetching wallet details for {} at {}".format(wallet_id, url))
     wallet_details_response = requests.get(url)
 
