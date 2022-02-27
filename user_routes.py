@@ -3,8 +3,11 @@ import uuid
 
 from application import app, get_string_from_file, get_db_connection
 from flask import abort, request
+from opencensus.ext.azure.log_exporter import AzureLogHandler
 
 logger = logging.getLogger(__name__)
+
+logger.addHandler(AzureLogHandler())
 
 
 @app.route('/user')
