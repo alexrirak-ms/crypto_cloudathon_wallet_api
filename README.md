@@ -26,3 +26,12 @@ Endpoints which manipulate or display information related to wallets:
 * [Get All Wallet Details By User](docs/wallet/get_wallets_by_user.md) : `GET /wallets/user/:user_id`
 * [Get Wallet Value](docs/wallet/get_wallet_value.md) : `GET /wallet/:wallet_id/value`
 * [Create Wallet](docs/wallet/create_wallet.md) : `PUT /wallets/:chain_id/:user_id`
+
+### User API
+[Azure Link](https://crypto-banksters-wallet-api.azurewebsites.net/user)
+
+Endpoints which manipulate or display information related to users:
+
+* [Health Ping](docs/user/user.md) : `GET /user`
+* [Get User By Id](docs/user/get_user_by_id.md) : `GET /user/:user_id`
+* [Get User By Username](docs/user/get_user_by_username.md) : `GET /user/by-username/:username`

@@ -7,7 +7,7 @@ Fetches wallet details based on user id
 **URL Parameters** : `user_id=[string]` where `user_id` is the ID of the User in the
 database.
 
-**URL Parameters** : `include_values=[boolean]` where `include_values` specifies whether to include balance details
+**Query Parameters** : `?include_values=[boolean]` where `include_values` specifies whether to include balance details
 
 **Method** : `GET`
 
