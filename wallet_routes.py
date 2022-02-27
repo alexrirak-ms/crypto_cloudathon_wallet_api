@@ -37,6 +37,8 @@ def get_wallet(wallet_id: str, ):
     if wallet_id is None:
         abort(400, "Invalid Request")
 
+    logger.info("Fetching wallet with id {}".format(wallet_id))
+
     with get_db_connection() as db:
         with db.cursor() as cursor:
             # fetch the private key for the wallet
@@ -49,10 +51,12 @@ def get_wallet(wallet_id: str, ):
                           for value in cursor.fetchall()]
 
                 if result is None:
+                    logger.error("Could not find wallet with id {}".format(wallet_id))
                     abort(400, "Unknown Wallet id")
 
                 return (result[0], 200)
             except IndexError:
+                logger.error("Could not find wallet with id {}".format(wallet_id))
                 abort(400, "Could not fetch wallet details")
 
 
