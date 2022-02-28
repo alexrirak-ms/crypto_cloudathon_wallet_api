@@ -37,7 +37,8 @@ Endpoints which manipulate or display information related to transactions:
 * [Get Transaction](docs/transaction/get_transaction.md) : `GET /transaction/:coin/:transaction_hash`
 * [Create Transaction](docs/transaction/create_transaction.md) : `PUT /transaction`
 * [Create Funding Transaction](docs/transaction/create_funding_transaction.md) : `POST /transaction/fund/:wallet_id/:amount`
-* [Get Value in USD](docs/transaction/get_value_in_usd.md) : `GET /usd-value/:symbol`
+* [Get Value in USD](docs/transaction/get_value_in_usd.md) : `GET /conversions/usd-value/:symbol`
+* [Convert to USD](docs/transaction/get_value_in_usd.md) : `GET /conversions/to-usd/:symbol/:amount`
 
 ### Wallet API
 [Azure Link](https://crypto-banksters-wallet-api.azurewebsites.net/wallet)

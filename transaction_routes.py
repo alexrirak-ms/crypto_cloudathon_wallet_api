@@ -157,7 +157,7 @@ def create_funding_transaction(wallet_id: str, amount: int):
         abort(400, "Error from Blockcypher API")
 
 
-@app.route('/usd-value/<string:symbol>')
+@app.route('/conversions/usd-value/<string:symbol>')
 def get_value_in_usd(symbol: str) -> str:
     """
     Fetches the USD value of a coin
@@ -185,6 +185,32 @@ def get_value_in_usd(symbol: str) -> str:
         return str(value_in_usd)
 
 
+# Deprecated, use /conversions/usd-value/<string:symbol> instead
+@app.route('/usd-value/<string:symbol>')
+def get_value_in_usd_old(symbol: str) -> str:
+    """
+    Fetches the USD value of a coin (DEPRECATED)
+    :param symbol: the symbol of the coin
+    :return: string representation of the price
+    """
+    return get_value_in_usd(symbol)
+
+
+@app.route('/conversions/to-usd/<string:symbol>/<int:amount>')
+def get_value_to_usd(symbol: str, amount: int) -> str:
+    """
+    Returns the value in us dollars of the given coin and amount
+    :param symbol: the coin being converted
+    :param amount: (in the lowest non-divisible unit - satoshi)
+    :return:
+    """
+    return ({
+                "usdValue": round(amount / 100000000 * float(get_value_in_usd_old(symbol)), 2),
+                "convertedCoin": symbol,
+                "inputAmount": amount
+            }, 200)
+
+
 def get_wallet_details_by_id(wallet_id: str):
     """
     fetches the wallet details from the wallet API
@@ -208,6 +234,7 @@ def get_wallet_details_by_id(wallet_id: str):
     except ReadTimeout:
         logger.error('Timed out waiting for wallet details for {}'.format(wallet_id))
         abort(500, "Timed out waiting on wallet api")
+
 
 # Define all our queries here cause python doesn't like me doing this on top
 GET_WALLET_PRIVATE_KEY_BY_ID = get_string_from_file('sql/getWalletPrivateKeyById.sql')
