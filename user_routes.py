@@ -29,7 +29,7 @@ def get_user_by_id(user_id: str):
     fetches a user by user_id
     :param user_id: id of the user to fetch
     :return: json object of the user's properties
-        user_id, email, username
+        user_id, email, username, enrollment
     """
     if user_id is None:
         abort(400, "Missing User_id")
@@ -60,7 +60,7 @@ def get_user_by_username(username: str):
     If query param create_user=True will create the user if it doesn't exist
     :param username: id of the user to fetch
     :return: json object of the user's properties
-        user_id, email, username
+        user_id, email, username, enrollment
     """
     if username is None:
         abort(400, "Missing Username")
@@ -95,6 +95,33 @@ def get_user_by_username(username: str):
                     abort(400, "Could not find user")
 
 
+@app.route('/user/<string:user_id>/enroll')
+def enroll_user_by_id(user_id: str):
+    """
+    Changes a user's enrollment status to be true based on user id
+    :param user_id: the user to update
+    :return: json object of the user's properties
+        user_id, email, username, enrollment
+    """
+
+    if user_id is None:
+        abort(400, "Missing User_id")
+
+    with get_db_connection() as db:
+        with db.cursor() as cursor:
+            # fetch the private key for the wallet
+            cursor.execute(GET_USER_INFO_BY_ID % (user_id))
+            result = cursor.fetchone()
+
+            if result is None:
+                abort(400, "Could not find user")
+
+            cursor.execute(ENROLL_USER_BY_ID % (user_id))
+            db.commit()
+
+            return (get_user_by_id(user_id)[0], 201)
+
+
 def create_user(username: str, email: str) -> str:
     """
     Creates a user with the given username/email
@@ -117,3 +144,4 @@ def create_user(username: str, email: str) -> str:
 GET_USER_INFO_BY_USERNAME = get_string_from_file('sql/getUserInfoByUsername.sql')
 GET_USER_INFO_BY_ID = get_string_from_file('sql/getUserInfoById.sql')
 INSERT_USER_DETAILS = get_string_from_file('sql/insertUserDetails.sql')
+ENROLL_USER_BY_ID = get_string_from_file('sql/enrollUserById.sql')

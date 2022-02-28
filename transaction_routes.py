@@ -215,7 +215,7 @@ def get_value_to_usd(symbol: str, amount: int):
             }, 200)
 
 
-@app.route('/conversions/from-usd/<string:symbol>/<int:amount>')
+@app.route('/conversions/from-usd/<string:symbol>/<float:amount>')
 def get_value_from_usd(symbol: str, amount: float) -> str:
     """
     Returns the value in lowest non-divisible unit of the given coin and usd amount
