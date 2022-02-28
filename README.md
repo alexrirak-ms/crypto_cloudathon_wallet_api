@@ -60,3 +60,4 @@ Endpoints which manipulate or display information related to users:
 * [Health Ping](docs/user/user.md) : `GET /user`
 * [Get User By Id](docs/user/get_user_by_id.md) : `GET /user/:user_id`
 * [Get User By Username](docs/user/get_user_by_username.md) : `GET /user/by-username/:username`
+* [Enroll User](docs/user/enroll_user_by_id.md) : `GET /user/:user_id/enroll`
