@@ -20,6 +20,7 @@ Fetches user details based on user id
 {
     "email": "alex@some.com",
     "user_id": "e16666ff-c559-4aab-96eb-f0a5c2c77b18",
-    "username": "Alex"
+    "username": "Alex",
+    "enrolled": 0
 }
 ```
