@@ -158,7 +158,7 @@ def create_funding_transaction(wallet_id: str, amount: int):
 
 
 @app.route('/conversions/usd-value/<string:symbol>')
-def get_value_in_usd(symbol: str) -> str:
+def get_value_in_usd(symbol: str):
     """
     Fetches the USD value of a coin
     :param symbol: the symbol of the coin
@@ -182,7 +182,10 @@ def get_value_in_usd(symbol: str) -> str:
         crypto_data = json.loads(response.content)
         value_in_usd = crypto_data['data']['market_data']['price_usd']
 
-        return str(value_in_usd)
+        return ({
+                    "usdPrice": value_in_usd,
+                    "coin": symbol
+                }, 200)
 
 
 # Deprecated, use /conversions/usd-value/<string:symbol> instead
@@ -193,11 +196,12 @@ def get_value_in_usd_old(symbol: str) -> str:
     :param symbol: the symbol of the coin
     :return: string representation of the price
     """
-    return get_value_in_usd(symbol)
+    # formatting here is to maintain backwards compatibility
+    return str(get_value_in_usd(symbol)[0]["usdPrice"])
 
 
 @app.route('/conversions/to-usd/<string:symbol>/<int:amount>')
-def get_value_to_usd(symbol: str, amount: int) -> str:
+def get_value_to_usd(symbol: str, amount: int):
     """
     Returns the value in us dollars of the given coin and amount
     :param symbol: the coin being converted
@@ -206,6 +210,21 @@ def get_value_to_usd(symbol: str, amount: int) -> str:
     """
     return ({
                 "usdValue": round(amount / 100000000 * float(get_value_in_usd_old(symbol)), 2),
+                "convertedCoin": symbol,
+                "inputAmount": amount
+            }, 200)
+
+
+@app.route('/conversions/from-usd/<string:symbol>/<int:amount>')
+def get_value_from_usd(symbol: str, amount: float) -> str:
+    """
+    Returns the value in lowest non-divisible unit of the given coin and usd amount
+    :param symbol: the coin being converted
+    :param amount: USD amount
+    :return:
+    """
+    return ({
+                "coinValue": amount / float(get_value_in_usd_old(symbol)) * 100000000,
                 "convertedCoin": symbol,
                 "inputAmount": amount
             }, 200)
