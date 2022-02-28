@@ -17,5 +17,8 @@ Fetches the USD value of a coin based on *messari.io* api. *(Handles test chain 
 **Content example**
 
 ```text
-38560.21323546509
+{
+    "coin": "btc",
+    "usdPrice": 39962.92937321809
+}
 ```

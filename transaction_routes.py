@@ -182,7 +182,11 @@ def get_value_in_usd(symbol: str) -> str:
         crypto_data = json.loads(response.content)
         value_in_usd = crypto_data['data']['market_data']['price_usd']
 
-        return str(value_in_usd)
+        # return str(value_in_usd)
+        return ({
+                    "usdPrice": value_in_usd,
+                    "coin": symbol
+                }, 200)
 
 
 # Deprecated, use /conversions/usd-value/<string:symbol> instead
@@ -193,7 +197,8 @@ def get_value_in_usd_old(symbol: str) -> str:
     :param symbol: the symbol of the coin
     :return: string representation of the price
     """
-    return get_value_in_usd(symbol)
+    # formatting here is to maintain backwards compatibility
+    return str(get_value_in_usd(symbol)[0]["usdPrice"])
 
 
 @app.route('/conversions/to-usd/<string:symbol>/<int:amount>')
