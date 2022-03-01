@@ -2,6 +2,9 @@ import logging
 import sys
 import uuid
 
+import requests
+from requests import ReadTimeout
+
 from application import app, get_string_from_file, get_db_connection
 from flask import abort, request
 from opencensus.ext.azure.log_exporter import AzureLogHandler
@@ -136,6 +139,18 @@ def create_user(username: str, email: str) -> str:
                                                  email,
                                                  username))
             db.commit()
+
+            # try to create a bitcoin wallet for the new user too
+            try:
+                wallet_response = requests.put(request.url_root + "wallet/abd76ab0-0b3c-4d33-84f2-5582f482acd3/" + user_id,
+                                               timeout=10)
+
+                if wallet_response.status_code != 200:
+                    logger.error('Could not create wallet for {}'.format(user_id))
+                    # purposely no abort here as wallet creation is not critical
+            except ReadTimeout:
+                logger.error('Could not create wallet for {}'.format(user_id))
+                # purposely no abort here as wallet creation is not critical
 
             return user_id
 

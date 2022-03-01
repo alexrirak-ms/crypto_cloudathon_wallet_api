@@ -139,6 +139,8 @@ def create_wallet(chain_id: str, user_id: str):
     if user_id is None:
         abort(400, "User not specified")
 
+    logger.info("Creating wallet for {} on chain {}".format(user_id, chain_id))
+
     with get_db_connection() as db:
         with db.cursor() as cursor:
             # get info on the chain
